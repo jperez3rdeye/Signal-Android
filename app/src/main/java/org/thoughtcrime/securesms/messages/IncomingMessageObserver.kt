@@ -11,7 +11,14 @@ import android.net.ConnectivityManager
 import android.os.IBinder
 import androidx.annotation.VisibleForTesting
 import androidx.core.app.NotificationCompat
+import com.a324.mbaaslibrary.service.SecuredConnectionService
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.collections.immutable.toImmutableSet
+import okhttp3.MediaType
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.Response
 import org.signal.core.util.ThreadUtil
 import org.signal.core.util.concurrent.SignalExecutors
 import org.signal.core.util.logging.Log
@@ -33,6 +40,8 @@ import org.thoughtcrime.securesms.jobs.UnableToStartException
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.messages.MessageDecryptor.FollowUpOperation
 import org.thoughtcrime.securesms.messages.protocol.BufferedProtocolStore
+import org.thoughtcrime.securesms.mms.MessageArchival
+import org.thoughtcrime.securesms.mms.MessageArchivalAttachment
 import org.thoughtcrime.securesms.notifications.NotificationChannels
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.util.AppForegroundObserver
@@ -41,6 +50,7 @@ import org.whispersystems.signalservice.api.util.UuidUtil
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState
 import org.whispersystems.signalservice.api.websocket.WebSocketUnavailableException
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos
+import java.io.IOException
 import java.util.*
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Semaphore

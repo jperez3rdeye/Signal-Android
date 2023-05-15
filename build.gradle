@@ -9,6 +9,7 @@ buildscript {
                 includeGroupByRegex "com\\.archinamon.*"
             }
         }
+        jcenter()
         maven {
             url "https://plugins.gradle.org/m2/"
             content {

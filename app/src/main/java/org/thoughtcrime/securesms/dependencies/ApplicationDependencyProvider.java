@@ -34,6 +34,7 @@ import org.thoughtcrime.securesms.jobmanager.JobMigrator;
 import org.thoughtcrime.securesms.jobmanager.impl.FactoryJobPredicate;
 import org.thoughtcrime.securesms.jobs.FastJobStorage;
 import org.thoughtcrime.securesms.jobs.GroupCallUpdateSendJob;
+import org.thoughtcrime.securesms.jobs.IndividualArchiveJob;
 import org.thoughtcrime.securesms.jobs.JobManagerFactories;
 import org.thoughtcrime.securesms.jobs.MarkerJob;
 import org.thoughtcrime.securesms.jobs.PreKeysSyncJob;
@@ -176,7 +177,7 @@ public class ApplicationDependencyProvider implements ApplicationDependencies.Pr
                                                                   .setJobStorage(new FastJobStorage(JobDatabase.getInstance(context)))
                                                                   .setJobMigrator(new JobMigrator(TextSecurePreferences.getJobManagerVersion(context), JobManager.CURRENT_VERSION, JobManagerFactories.getJobMigrations(context)))
                                                                   .addReservedJobRunner(new FactoryJobPredicate(PushDecryptMessageJob.KEY, PushProcessMessageJob.KEY, MarkerJob.KEY))
-                                                                  .addReservedJobRunner(new FactoryJobPredicate(IndividualSendJob.KEY, PushGroupSendJob.KEY, ReactionSendJob.KEY, TypingSendJob.KEY, GroupCallUpdateSendJob.KEY))
+                                                                  .addReservedJobRunner(new FactoryJobPredicate(IndividualSendJob.KEY, IndividualArchiveJob.KEY, PushGroupSendJob.KEY, ReactionSendJob.KEY, TypingSendJob.KEY, GroupCallUpdateSendJob.KEY))
                                                                   .build();
     return new JobManager(context, config);
   }

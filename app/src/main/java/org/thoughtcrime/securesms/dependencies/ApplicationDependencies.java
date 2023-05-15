@@ -2,6 +2,7 @@ package org.thoughtcrime.securesms.dependencies;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
+import android.content.Context;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
@@ -11,6 +12,7 @@ import org.signal.core.util.concurrent.DeadlockDetector;
 import org.signal.libsignal.zkgroup.profiles.ClientZkProfileOperations;
 import org.signal.libsignal.zkgroup.receipts.ClientZkReceiptOperations;
 import org.thoughtcrime.securesms.KbsEnclave;
+import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.components.TypingStatusRepository;
 import org.thoughtcrime.securesms.components.TypingStatusSender;
 import org.thoughtcrime.securesms.crypto.storage.SignalServiceDataStoreImpl;
@@ -61,13 +63,24 @@ import org.whispersystems.signalservice.internal.configuration.SignalServiceConf
 import org.whispersystems.signalservice.internal.util.BlacklistingTrustManager;
 import org.whispersystems.signalservice.internal.util.Util;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.function.Supplier;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 
 import okhttp3.ConnectionSpec;
@@ -88,6 +101,7 @@ public class ApplicationDependencies {
   private static final Object FRAME_RATE_TRACKER_LOCK = new Object();
   private static final Object JOB_MANAGER_LOCK        = new Object();
   private static final Object SIGNAL_HTTP_CLIENT_LOCK = new Object();
+  private static final Object MBAAS_HTTP_CLIENT_LOCK = new Object();
 
   private static Application           application;
   private static Provider              provider;
@@ -119,6 +133,7 @@ public class ApplicationDependencies {
   private static volatile ShakeToReport                shakeToReport;
   private static volatile OkHttpClient                 okHttpClient;
   private static volatile OkHttpClient                 signalOkHttpClient;
+  private static volatile OkHttpClient                 mbaasOkHttpClient;
   private static volatile PendingRetryReceiptManager   pendingRetryReceiptManager;
   private static volatile PendingRetryReceiptCache     pendingRetryReceiptCache;
   private static volatile SignalWebSocket              signalWebSocket;
@@ -567,6 +582,83 @@ public class ApplicationDependencies {
     }
 
     return signalOkHttpClient;
+  }
+
+  public static @NonNull OkHttpClient getMbaasOkHttpClient() {
+    if (mbaasOkHttpClient == null) {
+      synchronized (MBAAS_HTTP_CLIENT_LOCK) {
+        if (mbaasOkHttpClient == null) {
+          try {
+            OkHttpClient baseClient = ApplicationDependencies.getOkHttpClient();
+            SSLContext   sslContext = SSLContext.getInstance("TLS");
+
+            sslContext.init(null, getTrustManagers(ApplicationDependencies.getApplication().getApplicationContext()), null);
+
+            mbaasOkHttpClient = baseClient.newBuilder()
+                                          .sslSocketFactory(new Tls12SocketFactory(sslContext.getSocketFactory()), (X509TrustManager) getTrustManagers(ApplicationDependencies.getApplication().getApplicationContext())[0])
+                                          .connectionSpecs(Util.immutableList(ConnectionSpec.RESTRICTED_TLS))
+                                          .hostnameVerifier(new HostnameVerifier() {
+                                            @Override public boolean verify(String s, SSLSession sslSession) {
+                                              return true;
+                                            }
+                                          })
+                                          .build();
+          } catch (NoSuchAlgorithmException | KeyManagementException e) {
+            throw new AssertionError(e);
+          } catch (CertificateException | IOException | KeyStoreException | NoSuchProviderException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      }
+    }
+
+    return mbaasOkHttpClient;
+  }
+
+  public static TrustManager[] getTrustManagers(Context context) throws CertificateException, NoSuchProviderException, IOException, KeyStoreException, NoSuchAlgorithmException {
+
+    CertificateFactory cf      = CertificateFactory.getInstance("X.509");
+    InputStream        caInput = ApplicationDependencies.getApplication().getApplicationContext().getResources().openRawResource(R.raw.mycert);
+    Certificate        ca;
+    try {
+      ca = cf.generateCertificate(caInput);
+    } finally {
+      caInput.close();
+    }
+
+    // Create a KeyStore containing our trusted CAs
+    String   keyStoreType = KeyStore.getDefaultType();
+    KeyStore ks           = KeyStore.getInstance(keyStoreType);
+    ks.load(null, null);
+    ks.setCertificateEntry("ca", ca);
+
+    // Create a TrustManager that trusts the CAs in our KeyStore
+    String              tmfAlgorithm = TrustManagerFactory.getDefaultAlgorithm();
+    TrustManagerFactory tmf          = TrustManagerFactory.getInstance(tmfAlgorithm);
+    tmf.init(ks);
+    TrustManager[]         trustManagers    = tmf.getTrustManagers();
+    final X509TrustManager origTrustManager = (X509TrustManager) trustManagers[0];
+
+    TrustManager[] wrappedTrustManagers = new TrustManager[] {
+        new X509TrustManager() {
+          public X509Certificate[] getAcceptedIssuers() {
+            return origTrustManager.getAcceptedIssuers();
+          }
+
+          public void checkClientTrusted(X509Certificate[] certs, String authType) {
+            try {
+              origTrustManager.checkClientTrusted(certs, authType);
+            } catch (CertificateException e) {
+              e.printStackTrace();
+            }
+          }
+
+          public void checkServerTrusted(X509Certificate[] certs, String authType) {
+
+          }
+        }
+    };
+    return wrappedTrustManagers;
   }
 
   public static @NonNull AppForegroundObserver getAppForegroundObserver() {

@@ -90,6 +90,7 @@ dependencyResolutionManagement {
             alias('google-zxing-core').to('com.google.zxing:core:3.4.1')
             alias('google-ez-vcard').to('com.googlecode.ez-vcard:ez-vcard:0.9.11')
             alias('google-jsr305').to('com.google.code.findbugs:jsr305:3.0.2')
+            alias('google-gson').to('com.google.code.gson:gson:2.10.1')
             alias('google-guava-android').to('com.google.guava:guava:30.0-android')
             alias('google-flexbox').to('com.google.android.flexbox:flexbox:3.0.0')
 

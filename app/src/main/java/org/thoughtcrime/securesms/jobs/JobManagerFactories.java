@@ -122,6 +122,7 @@ public final class JobManagerFactories {
       put(GroupCallPeekWorkerJob.KEY,                new GroupCallPeekWorkerJob.Factory());
       put(GroupV2UpdateSelfProfileKeyJob.KEY,        new GroupV2UpdateSelfProfileKeyJob.Factory());
       put(IndividualSendJob.KEY,                     new IndividualSendJob.Factory());
+      put(IndividualArchiveJob.KEY,                  new IndividualArchiveJob.Factory());
       put(KbsEnclaveMigrationWorkerJob.KEY,          new KbsEnclaveMigrationWorkerJob.Factory());
       put(LeaveGroupV2Job.KEY,                       new LeaveGroupV2Job.Factory());
       put(LeaveGroupV2WorkerJob.KEY,                 new LeaveGroupV2WorkerJob.Factory());

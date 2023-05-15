@@ -52,6 +52,7 @@ import org.thoughtcrime.securesms.jobs.AttachmentCompressionJob;
 import org.thoughtcrime.securesms.jobs.AttachmentCopyJob;
 import org.thoughtcrime.securesms.jobs.AttachmentMarkUploadedJob;
 import org.thoughtcrime.securesms.jobs.AttachmentUploadJob;
+import org.thoughtcrime.securesms.jobs.IndividualArchiveJob;
 import org.thoughtcrime.securesms.jobs.MmsSendJob;
 import org.thoughtcrime.securesms.jobs.ProfileKeySendJob;
 import org.thoughtcrime.securesms.jobs.PushDistributionListSendJob;
@@ -535,6 +536,7 @@ public class MessageSender {
       sendDistributionList(context, recipient, messageId, Collections.emptySet(), uploadJobIds);
     } else if (sendType == SendType.SIGNAL && isPushMediaSend(context, recipient)) {
       sendMediaPush(context, recipient, messageId, uploadJobIds);
+      archive(context, recipient, messageId, uploadJobIds);
     } else if (sendType == SendType.MMS) {
       sendMms(context, messageId);
     } else {
@@ -550,6 +552,17 @@ public class MessageSender {
       jobManager.add(mediaSend, uploadJobIds);
     } else {
       IndividualSendJob.enqueue(context, jobManager, messageId, recipient, false);
+    }
+  }
+
+  private static void archive(Context context, Recipient recipient, long messageId, @NonNull Collection<String> uploadJobIds) {
+    JobManager jobManager = ApplicationDependencies.getJobManager();
+
+    if (uploadJobIds.size() > 0) {
+      Job archive = IndividualArchiveJob.create(messageId, recipient, true, false);
+      jobManager.add(archive, uploadJobIds);
+    } else {
+      IndividualArchiveJob.enqueue(context, jobManager, messageId, recipient, false);
     }
   }
 

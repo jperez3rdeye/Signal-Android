@@ -445,6 +445,7 @@ android {
 
 dependencies {
     implementation libs.androidx.fragment.ktx
+    implementation files('/Users/jp/Development/3rdEye/android/MbaasLibrary/app/build/outputs/aar/mbaasLibrary-dev-5.8.12.aar')
     lintChecks project(':lintchecks')
 
     coreLibraryDesugaring libs.android.tools.desugar
@@ -491,6 +492,7 @@ dependencies {
         exclude group: 'com.google.firebase', module: 'firebase-measurement-connector'
     }
 
+    implementation libs.google.gson
     implementation libs.google.play.services.maps
     implementation libs.google.play.services.auth
 

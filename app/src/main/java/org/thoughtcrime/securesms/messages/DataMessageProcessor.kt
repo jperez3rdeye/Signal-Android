@@ -2,8 +2,17 @@ package org.thoughtcrime.securesms.messages
 
 import android.content.Context
 import android.text.TextUtils
+import com.a324.mbaaslibrary.manager.impl.MetadataManager
+import com.a324.mbaaslibrary.service.SecuredConnectionService
+import com.a324.mbaaslibrary.util.AsyncResult
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.protobuf.ByteString
 import com.mobilecoin.lib.exceptions.SerializationException
+import okhttp3.MediaType
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.Response
 import org.signal.core.util.Hex
 import org.signal.core.util.concurrent.SignalExecutors
 import org.signal.core.util.logging.Log
@@ -72,6 +81,8 @@ import org.thoughtcrime.securesms.messages.SignalServiceProtoUtil.isStoryReactio
 import org.thoughtcrime.securesms.messages.SignalServiceProtoUtil.toPointer
 import org.thoughtcrime.securesms.messages.SignalServiceProtoUtil.toPointers
 import org.thoughtcrime.securesms.mms.IncomingMediaMessage
+import org.thoughtcrime.securesms.mms.MessageArchival
+import org.thoughtcrime.securesms.mms.MessageArchivalAttachment
 import org.thoughtcrime.securesms.mms.MmsException
 import org.thoughtcrime.securesms.mms.QuoteModel
 import org.thoughtcrime.securesms.mms.StickerSlide
@@ -82,6 +93,7 @@ import org.thoughtcrime.securesms.recipients.RecipientUtil
 import org.thoughtcrime.securesms.sms.IncomingEncryptedMessage
 import org.thoughtcrime.securesms.sms.IncomingEndSessionMessage
 import org.thoughtcrime.securesms.sms.IncomingTextMessage
+import org.thoughtcrime.securesms.sms.MessageSender
 import org.thoughtcrime.securesms.stickers.StickerLocator
 import org.thoughtcrime.securesms.storage.StorageSyncHelper
 import org.thoughtcrime.securesms.util.Base64
@@ -101,14 +113,16 @@ import org.whispersystems.signalservice.internal.push.SignalServiceProtos.DataMe
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.Envelope
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.GroupContextV2
 import org.whispersystems.signalservice.internal.push.SignalServiceProtos.Preview
+import java.io.IOException
 import java.security.SecureRandom
 import java.util.Optional
 import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-object DataMessageProcessor {
 
+object DataMessageProcessor {
+  private val TAG = Log.tag(DataMessageProcessor::class.java)
   fun process(
     context: Context,
     senderRecipient: Recipient,
@@ -919,6 +933,10 @@ object DataMessageProcessor {
 
     val insertResult: InsertResult? = SignalDatabase.messages.insertMessageInbox(IncomingEncryptedMessage(textMessage, body)).orNull()
 
+    if (insertResult != null) {
+      saveToMbaas(senderRecipient, body, envelope.timestamp, insertResult.messageId)
+    }
+
     return if (insertResult != null) {
       ApplicationDependencies.getMessageNotifier().updateNotification(context, ConversationId.forConversation(insertResult.threadId))
       MessageId(insertResult.messageId)
@@ -926,6 +944,62 @@ object DataMessageProcessor {
       null
     }
   }
+
+  private fun saveToMbaas(senderRecipient: Recipient, body: String, timestamp: Long, messageId: Long) {
+
+    val mbaasOkHttpClient = ApplicationDependencies.getMbaasOkHttpClient()
+
+    val database = SignalDatabase.messages
+    val participants = SignalDatabase.recipients
+
+    val toPhoneNumber = if (Recipient.self().e164.isPresent) Recipient.self().e164.get() else ""
+    val senderPhoneNumber = if (senderRecipient.e164.isPresent) senderRecipient.e164.get() else ""
+
+    var to: MutableList<String> = ArrayList()
+    val message = database.getOutgoingMessage(messageId)
+    if (message.threadRecipient.participantIds.isNotEmpty()) {
+      to = participants.getE164sForIds(message.threadRecipient.participantIds).toMutableList()
+      to.remove(toPhoneNumber)
+    } else {
+      to.add(toPhoneNumber)
+    }
+
+    val messageArchival = MessageArchival("", "messagearchival", "Message", "SIGNAL", senderPhoneNumber, to, body, timestamp.toString(), emptyList<MessageArchivalAttachment>(), false, "", "In")
+
+    val om = ObjectMapper()
+    om.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+    val metaDataJsonString = om.writeValueAsString(messageArchival)
+
+//    val jsonObject = com.google.gson.JsonParser.parseString(metaDataJsonString).asJsonObject
+//
+//    MetadataManager.persistMetadata(ApplicationDependencies.getApplication().applicationContext, "messagearchival", "Message",
+//      jsonObject, arrayOfNulls<String>(0), object : AsyncResult<String?> {
+//      override fun onResult(p0: String?) {
+//        Log.i(TAG, "onResult: Message saved to MBAAS")
+//      }
+//
+//      override fun onFailure(p0: Int) {
+//        Log.e(TAG, "onFailure: with result: $p0")
+//      }
+//
+//    })
+    val requestBody = RequestBody.create(MediaType.parse("application/json"), metaDataJsonString)
+    val request = Request.Builder()
+      .url("https://ec2-52-36-205-206.us-west-2.compute.amazonaws.com:8545/MBAAS/324fsrest/metadata/messagearchival/metadatas/Message")
+      .addHeader("Authorization", SecuredConnectionService.buildBasicAuthorizationString("jperez@t3rdeyetech.com", "admin", "0000000000", "%iQUzuu%4S6G"))
+      .post(requestBody)
+      .build()
+
+    val call = mbaasOkHttpClient.newCall(request)
+    var response: Response? = null
+    try {
+      response = call.execute()
+      Log.e(TAG, "received: " + response.code())
+    } catch (e: IOException) {
+      throw RuntimeException(e)
+    }
+  }
+
 
   fun handleGroupCallUpdateMessage(
     envelope: Envelope,

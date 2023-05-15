@@ -37,6 +37,7 @@ internal class UpdateSmsJobsMigrationJob(
     ApplicationDependencies.getJobManager().update { jobSpec ->
       when (jobSpec.factoryKey) {
         "PushTextSendJob" -> jobSpec.updateAndSerialize("message_id", null, idOffset)
+        "ArchiveJob" -> jobSpec.updateAndSerialize("message_id", null, idOffset)
         "ReactionSendJob" -> jobSpec.updateAndSerialize("message_id", "is_mms", idOffset)
         "RemoteDeleteSendJob" -> jobSpec.updateAndSerialize("message_id", "is_mms", idOffset)
         "SmsSendJob" -> jobSpec.updateAndSerialize("message_id", null, idOffset)
