@@ -19,8 +19,8 @@ import org.thoughtcrime.securesms.database.AttachmentTable;
 import org.thoughtcrime.securesms.database.SignalDatabase;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.events.PartProgressEvent;
-import org.thoughtcrime.securesms.jobmanager.JsonJobData;
 import org.thoughtcrime.securesms.jobmanager.Job;
+import org.thoughtcrime.securesms.jobmanager.JsonJobData;
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
 import org.thoughtcrime.securesms.mms.PartAuthority;
 import org.thoughtcrime.securesms.net.NotPushRegisteredException;
@@ -55,9 +55,9 @@ public final class AttachmentUploadJob extends BaseJob {
 
   private static final long UPLOAD_REUSE_THRESHOLD = TimeUnit.DAYS.toMillis(3);
 
-  private static final String KEY_ROW_ID      = "row_id";
-  private static final String KEY_UNIQUE_ID   = "unique_id";
-  private static final String KEY_FORCE_V2    = "force_v2";
+  private static final String KEY_ROW_ID    = "row_id";
+  private static final String KEY_UNIQUE_ID = "unique_id";
+  private static final String KEY_FORCE_V2  = "force_v2";
 
   /**
    * Foreground notification shows while uploading attachments above this.
@@ -70,10 +70,10 @@ public final class AttachmentUploadJob extends BaseJob {
 
   public AttachmentUploadJob(AttachmentId attachmentId) {
     this(new Job.Parameters.Builder()
-                           .addConstraint(NetworkConstraint.KEY)
-                           .setLifespan(TimeUnit.DAYS.toMillis(1))
-                           .setMaxAttempts(Parameters.UNLIMITED)
-                           .build(),
+             .addConstraint(NetworkConstraint.KEY)
+             .setLifespan(TimeUnit.DAYS.toMillis(1))
+             .setMaxAttempts(Parameters.UNLIMITED)
+             .build(),
          attachmentId,
          false);
   }
@@ -187,7 +187,6 @@ public final class AttachmentUploadJob extends BaseJob {
     if (attachment.getUri() == null || attachment.getSize() == 0) {
       throw new InvalidAttachmentException(new IOException("Assertion failed, outgoing attachment has no data!"));
     }
-
     try {
       InputStream is = PartAuthority.getAttachmentStream(context, attachment.getUri());
       SignalServiceAttachment.Builder builder = SignalServiceAttachment.newStreamBuilder()

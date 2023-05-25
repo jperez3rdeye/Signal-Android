@@ -336,6 +336,15 @@
         <item name="colorError">@color/signal_colorError</item>
     </style>
 
+    <style name="Signal.ThemeOverlay.ExposedDropdown" parent="ThemeOverlay.Material3">
+        <item name="colorSurfaceVariant">@color/signal_colorSurfaceVariant</item>
+        <item name="colorOnSurfaceVariant">@color/signal_colorOnSurfaceVariant</item>
+        <item name="colorPrimary">@color/signal_colorPrimary</item>
+        <item name="colorOnPrimary">@color/signal_colorOnPrimary</item>
+        <item name="colorOnSurface">@color/signal_colorOnSurface</item>
+        <item name="colorError">@color/signal_colorError</item>
+    </style>
+
     <style name="ThemeOverlay.Signal.MaterialSwitch" parent="ThemeOverlay.Material3">
         <item name="colorPrimary">@color/signal_colorPrimary</item>
         <item name="colorPrimaryContainer">@color/signal_colorPrimaryContainer</item>

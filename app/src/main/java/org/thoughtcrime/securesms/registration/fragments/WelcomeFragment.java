@@ -22,6 +22,8 @@ import androidx.navigation.ActivityNavigator;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
 
+import com.a324.mbaaslibrary.manager.RegistrationManager;
+import com.a324.mbaaslibrary.manager.impl.RegistrationManagerImpl;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber;
 
@@ -31,6 +33,7 @@ import org.signal.devicetransfer.DeviceToDeviceTransferService;
 import org.signal.devicetransfer.TransferStatus;
 import org.thoughtcrime.securesms.LoggingFragment;
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
 import org.thoughtcrime.securesms.permissions.Permissions;
 import org.thoughtcrime.securesms.registration.viewmodel.RegistrationViewModel;
@@ -83,6 +86,7 @@ public final class WelcomeFragment extends LoggingFragment {
   @Override
   public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
     super.onViewCreated(view, savedInstanceState);
+    RegistrationManager rm = new RegistrationManagerImpl(ApplicationDependencies.getApplication().getApplicationContext());
 
     viewModel = new ViewModelProvider(requireActivity()).get(RegistrationViewModel.class);
 

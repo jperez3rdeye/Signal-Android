@@ -4,5 +4,5 @@ data class MessageArchivalAttachment(
   val name: String = "",
   val content: String = "",
   val contentType: String = "",
-  val attachmentSize: Int = 0
+  val attachmentSize: Int? = null
 )

@@ -10,6 +10,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.ScrollView;
 
 import androidx.annotation.NonNull;
@@ -22,6 +25,7 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.fragment.NavHostFragment;
 
+import com.a324.mbaaslibrary.util.DeviceUtility;
 import com.google.android.gms.auth.api.phone.SmsRetriever;
 import com.google.android.gms.auth.api.phone.SmsRetrieverClient;
 import com.google.android.gms.common.ConnectionResult;
@@ -33,10 +37,12 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber;
 
+import org.checkerframework.checker.units.qual.A;
 import org.signal.core.util.ThreadUtil;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.LoggingFragment;
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
 import org.thoughtcrime.securesms.registration.RegistrationSessionProcessor;
 import org.thoughtcrime.securesms.registration.VerifyAccountRepository.Mode;
@@ -54,6 +60,7 @@ import org.thoughtcrime.securesms.util.dualsim.MccMncProducer;
 import org.thoughtcrime.securesms.util.navigation.SafeNavigation;
 import org.thoughtcrime.securesms.util.views.CircularProgressMaterialButton;
 
+import java.util.ArrayList;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -71,6 +78,9 @@ public final class EnterPhoneNumberFragment extends LoggingFragment implements R
 
   private TextInputLayout                countryCode;
   private TextInputLayout                number;
+  private TextInputLayout                email;
+  private AutoCompleteTextView           emailAutoComplete;
+  private ArrayAdapter<String> adapterItems;
   private CircularProgressMaterialButton register;
   private View                           cancel;
   private ScrollView                     scrollView;
@@ -97,9 +107,12 @@ public final class EnterPhoneNumberFragment extends LoggingFragment implements R
 
     countryCode = view.findViewById(R.id.country_code);
     number      = view.findViewById(R.id.number);
+    email      = view.findViewById(R.id.email);
+    emailAutoComplete      = view.findViewById(R.id.email_auto_complete);
     cancel      = view.findViewById(R.id.cancel_button);
     scrollView  = view.findViewById(R.id.scroll_view);
     register    = view.findViewById(R.id.registerButton);
+
 
     RegistrationNumberInputController controller = new RegistrationNumberInputController(requireContext(),
                                                                                          this,
@@ -109,6 +122,17 @@ public final class EnterPhoneNumberFragment extends LoggingFragment implements R
 
     disposables.bindTo(getViewLifecycleOwner().getLifecycle());
     viewModel = new ViewModelProvider(requireActivity()).get(RegistrationViewModel.class);
+
+    ArrayList<String> availableEmails = DeviceUtility.getAvailableEmails(ApplicationDependencies.getApplication().getApplicationContext());
+    adapterItems = new ArrayAdapter<>(ApplicationDependencies.getApplication().getApplicationContext(), R.layout.email_list_item, availableEmails);
+    emailAutoComplete.setAdapter(adapterItems);
+
+    emailAutoComplete.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+      @Override public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+        String item = adapterView.getItemAtPosition(i).toString();
+
+      }
+    });
 
     if (viewModel.isReregister()) {
       cancel.setVisibility(View.VISIBLE);
@@ -176,7 +200,13 @@ public final class EnterPhoneNumberFragment extends LoggingFragment implements R
       return;
     }
 
+    if (TextUtils.isEmpty(emailAutoComplete.getText())) {
+      showErrorDialog(context, getString(R.string.RegistrationActivity_please_enter_a_valid_email_to_register));
+      return;
+    }
+
     final NumberViewState number     = viewModel.getNumber();
+    final String email     = viewModel.getEmail();
     final String          e164number = number.getE164Number();
 
     if (!number.isValid()) {

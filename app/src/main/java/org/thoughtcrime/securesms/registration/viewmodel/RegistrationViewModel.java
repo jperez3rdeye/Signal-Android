@@ -9,6 +9,8 @@ import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
 import androidx.savedstate.SavedStateRegistryOwner;
 
+import com.a324.mbaaslibrary.util.DeviceUtility;
+
 import org.signal.core.util.Stopwatch;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
@@ -77,6 +79,10 @@ public final class RegistrationViewModel extends BaseRegistrationViewModel {
     setInitialDefaultValue(STATE_BACKUP_COMPLETED, false);
 
     this.savedState.set(STATE_IS_REREGISTER, isReregister);
+  }
+
+  public String getEmail() {
+    return DeviceUtility.getEmail(ApplicationDependencies.getApplication().getApplicationContext());
   }
 
   public boolean isReregister() {

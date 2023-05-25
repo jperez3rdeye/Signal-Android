@@ -1804,6 +1804,7 @@
         country code
     </string>
     <string name="RegistrationActivity_please_enter_a_valid_phone_number_to_register">Please enter a valid phone number to register.</string>
+    <string name="RegistrationActivity_please_enter_a_valid_email_to_register">Please enter a valid email to register.</string>
     <string name="RegistrationActivity_invalid_number">Invalid number</string>
     <string name="RegistrationActivity_the_number_you_specified_s_is_invalid">The number you
         specified (%s) is invalid.
@@ -1859,6 +1860,7 @@
     <string name="RegistrationActivity_make_sure_your_phone_has_a_cellular_signal">Make sure your phone has a cellular signal to receive your SMS or call</string>
 
     <string name="RegistrationActivity_phone_number_description">Phone number</string>
+    <string name="RegistrationActivity_email_description">E-mail</string>
     <string name="RegistrationActivity_country_code_description">Country code</string>
     <string name="RegistrationActivity_country_code_hint">Country</string>
     <string name="RegistrationActivity_call">Call</string>
