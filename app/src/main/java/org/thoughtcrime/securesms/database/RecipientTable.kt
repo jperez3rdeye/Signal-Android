@@ -77,6 +77,7 @@ import org.thoughtcrime.securesms.groups.BadGroupIdException
 import org.thoughtcrime.securesms.groups.GroupId
 import org.thoughtcrime.securesms.groups.GroupId.V1
 import org.thoughtcrime.securesms.groups.GroupId.V2
+import org.thoughtcrime.securesms.groups.GroupsV1MigratedCache
 import org.thoughtcrime.securesms.groups.v2.ProfileKeySet
 import org.thoughtcrime.securesms.groups.v2.processing.GroupsV2StateProcessor
 import org.thoughtcrime.securesms.jobs.RequestGroupV2InfoJob
@@ -86,6 +87,7 @@ import org.thoughtcrime.securesms.profiles.AvatarHelper
 import org.thoughtcrime.securesms.profiles.ProfileName
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.service.webrtc.links.CallLinkRoomId
 import org.thoughtcrime.securesms.storage.StorageRecordUpdate
 import org.thoughtcrime.securesms.storage.StorageSyncHelper
 import org.thoughtcrime.securesms.storage.StorageSyncModels
@@ -136,6 +138,7 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
     const val EMAIL = "email"
     const val GROUP_ID = "group_id"
     const val DISTRIBUTION_LIST_ID = "distribution_list_id"
+    private const val CALL_LINK_ROOM_ID = "call_link_room_id"
     const val GROUP_TYPE = "group_type"
     const val BLOCKED = "blocked"
     private const val MESSAGE_RINGTONE = "message_ringtone"
@@ -252,7 +255,8 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
         $UNREGISTERED_TIMESTAMP INTEGER DEFAULT 0,
         $HIDDEN INTEGER DEFAULT 0,
         $REPORTING_TOKEN BLOB DEFAULT NULL,
-        $SYSTEM_NICKNAME TEXT DEFAULT NULL
+        $SYSTEM_NICKNAME TEXT DEFAULT NULL,
+        $CALL_LINK_ROOM_ID TEXT DEFAULT NULL
       )
       """
 
@@ -315,7 +319,8 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
       DISTRIBUTION_LIST_ID,
       NEEDS_PNI_SIGNATURE,
       HIDDEN,
-      REPORTING_TOKEN
+      REPORTING_TOKEN,
+      CALL_LINK_ROOM_ID
     )
 
     private val ID_PROJECTION = arrayOf(ID)
@@ -416,6 +421,10 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
 
   fun getByServiceId(serviceId: ServiceId): Optional<RecipientId> {
     return getByColumn(SERVICE_ID, serviceId.toString())
+  }
+
+  fun getByCallLinkRoomId(callLinkRoomId: CallLinkRoomId): Optional<RecipientId> {
+    return getByColumn(CALL_LINK_ROOM_ID, callLinkRoomId.serialize())
   }
 
   /**
@@ -556,6 +565,19 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
     ).recipientId
   }
 
+  fun getOrInsertFromCallLinkRoomId(callLinkRoomId: CallLinkRoomId, avatarColor: AvatarColor): RecipientId {
+    return getOrInsertByColumn(
+      CALL_LINK_ROOM_ID,
+      callLinkRoomId.serialize(),
+      contentValuesOf(
+        GROUP_TYPE to GroupType.CALL_LINK.id,
+        CALL_LINK_ROOM_ID to callLinkRoomId.serialize(),
+        PROFILE_SHARING to 1,
+        AVATAR_COLOR to avatarColor.serialize()
+      )
+    ).recipientId
+  }
+
   fun getDistributionListRecipientIds(): List<RecipientId> {
     val recipientIds = mutableListOf<RecipientId>()
     readableDatabase.query(TABLE_NAME, arrayOf(ID), "$DISTRIBUTION_LIST_ID is not NULL", null, null, null, null).use { cursor ->
@@ -574,7 +596,7 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
       return existing.get()
     } else if (groupId.isV1 && groups.groupExists(groupId.requireV1().deriveV2MigrationGroupId())) {
       throw LegacyGroupInsertException(groupId)
-    } else if (groupId.isV2 && groups.getGroupV1ByExpectedV2(groupId.requireV2()).isPresent) {
+    } else if (groupId.isV2 && GroupsV1MigratedCache.hasV1Group(groupId.requireV2())) {
       throw MissedGroupMigrationInsertException(groupId)
     } else {
       val values = ContentValues().apply {
@@ -639,10 +661,10 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
       }
 
       if (groupId.isV2) {
-        val v1 = groups.getGroupV1ByExpectedV2(groupId.requireV2())
-        if (v1.isPresent) {
+        val v1 = GroupsV1MigratedCache.getV1GroupByV2Id(groupId.requireV2())
+        if (v1 != null) {
           db.setTransactionSuccessful()
-          return v1.get().recipientId
+          return v1.recipientId
         }
       }
 
@@ -1786,11 +1808,19 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
     }
   }
 
-  fun markHidden(id: RecipientId) {
-    val contentValues = contentValuesOf(
-      HIDDEN to 1,
-      PROFILE_SHARING to 0
-    )
+  fun markHidden(id: RecipientId, clearProfileKey: Boolean = false) {
+    val contentValues = if (clearProfileKey) {
+      contentValuesOf(
+        HIDDEN to 1,
+        PROFILE_SHARING to 0,
+        PROFILE_KEY to null
+      )
+    } else {
+      contentValuesOf(
+        HIDDEN to 1,
+        PROFILE_SHARING to 0
+      )
+    }
 
     val updated = writableDatabase.update(TABLE_NAME, contentValues, "$ID_WHERE AND $GROUP_TYPE = ?", SqlUtil.buildArgs(id, GroupType.NONE.id)) > 0
     if (updated) {
@@ -4144,7 +4174,8 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
       hasGroupsInCommon = cursor.requireBoolean(GROUPS_IN_COMMON),
       badges = parseBadgeList(cursor.requireBlob(BADGES)),
       needsPniSignature = cursor.requireBoolean(NEEDS_PNI_SIGNATURE),
-      isHidden = cursor.requireBoolean(HIDDEN)
+      isHidden = cursor.requireBoolean(HIDDEN),
+      callLinkRoomId = cursor.requireString(CALL_LINK_ROOM_ID)?.let { CallLinkRoomId.DatabaseSerializer.deserialize(it) }
     )
   }
 
@@ -4574,7 +4605,7 @@ open class RecipientTable(context: Context, databaseHelper: SignalDatabase) : Da
   }
 
   enum class GroupType(val id: Int) {
-    NONE(0), MMS(1), SIGNAL_V1(2), SIGNAL_V2(3), DISTRIBUTION_LIST(4);
+    NONE(0), MMS(1), SIGNAL_V1(2), SIGNAL_V2(3), DISTRIBUTION_LIST(4), CALL_LINK(5);
 
     companion object {
       fun fromId(id: Int): GroupType {

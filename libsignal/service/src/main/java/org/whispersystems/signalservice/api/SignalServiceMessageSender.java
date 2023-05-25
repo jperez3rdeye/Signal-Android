@@ -658,8 +658,6 @@ public class SignalServiceMessageSender {
 
     if (message.getContacts().isPresent()) {
       content = createMultiDeviceContactsContent(message.getContacts().get().getContactsStream().asStream(), message.getContacts().get().isComplete());
-    } else if (message.getGroups().isPresent()) {
-      content = createMultiDeviceGroupsContent(message.getGroups().get().asStream());
     } else if (message.getRead().isPresent()) {
       content = createMultiDeviceReadContent(message.getRead().get());
       urgent  = true;
@@ -688,8 +686,6 @@ public class SignalServiceMessageSender {
     } else if (message.getRequest().isPresent()) {
       content = createRequestContent(message.getRequest().get().getRequest());
       urgent  = message.getRequest().get().isUrgent();
-    } else if (message.getPniIdentity().isPresent()) {
-      content = createPniIdentityContent(message.getPniIdentity().get());
     } else if (message.getCallEvent().isPresent()) {
       content = createCallEventContent(message.getCallEvent().get());
     } else {
@@ -1306,16 +1302,6 @@ public class SignalServiceMessageSender {
     return container.setSyncMessage(builder).build();
   }
 
-  private Content createMultiDeviceGroupsContent(SignalServiceAttachmentStream groups) throws IOException {
-    Content.Builder     container = Content.newBuilder();
-    SyncMessage.Builder builder   = createSyncMessageBuilder();
-
-    builder.setGroups(SyncMessage.Groups.newBuilder()
-                                        .setBlob(createAttachmentPointer(groups)));
-
-    return container.setSyncMessage(builder).build();
-  }
-
   private Content createMultiDeviceSentTranscriptContent(SentTranscriptMessage transcript, boolean unidentifiedAccess) throws IOException {
     SignalServiceAddress address = transcript.getDestination().get();
     Content              content = createMessageContent(transcript);
@@ -1647,13 +1633,6 @@ public class SignalServiceMessageSender {
 
     Content.Builder     container = Content.newBuilder();
     SyncMessage.Builder builder   = createSyncMessageBuilder().setRequest(request);
-
-    return container.setSyncMessage(builder).build();
-  }
-
-  private Content createPniIdentityContent(SyncMessage.PniIdentity proto) {
-    Content.Builder     container = Content.newBuilder();
-    SyncMessage.Builder builder   = createSyncMessageBuilder().setPniIdentity(proto);
 
     return container.setSyncMessage(builder).build();
   }

@@ -13,9 +13,10 @@ dependencyResolutionManagement {
             version('exoplayer', '2.18.1')
             version('glide', '4.13.2')
             version('kotlin', '1.8.10')
-            version('libsignal-client', '0.23.1')
+            version('libsignal-client', '0.25.0')
             version('mp4parser', '1.9.39')
             version('android-gradle-plugin', '7.4.1')
+            version('accompanist', '0.28.0')
 
             // Android Plugins
             alias('android-library').to('com.android.library', 'com.android.library.gradle.plugin').versionRef('android-gradle-plugin')
@@ -23,10 +24,14 @@ dependencyResolutionManagement {
 
             // Compose
             alias('androidx-compose-bom').to('androidx.compose:compose-bom:2023.01.00')
-            alias('androidx-compose-material3').to('androidx.compose.material3', 'material3').withoutVersion()
+            alias('androidx-compose-material3').to('androidx.compose.material3', 'material3').withoutVersion();
             alias('androidx-compose-ui-tooling-preview').to('androidx.compose.ui', 'ui-tooling-preview').withoutVersion()
             alias('androidx-compose-ui-tooling-core').to('androidx.compose.ui', 'ui-tooling').withoutVersion()
+            alias('androidx-compose-rxjava3').to('androidx.compose.runtime:runtime-rxjava3:1.4.2')
             alias('ktlint-twitter-compose').to('com.twitter.compose.rules:ktlint:0.0.26')
+
+            // Accompanist
+            alias('accompanist-permissions').to('com.google.accompanist', 'accompanist-permissions').versionRef('accompanist')
 
             // Desugaring
             alias('android-tools-desugar').to('com.android.tools:desugar_jdk_libs:1.1.5')
@@ -107,8 +112,7 @@ dependencyResolutionManagement {
             alias('libsignal-client').to('org.signal', 'libsignal-client').versionRef('libsignal-client')
             alias('libsignal-android').to('org.signal', 'libsignal-android').versionRef('libsignal-client')
             alias('signal-aesgcmprovider').to('org.signal:aesgcmprovider:0.0.3')
-            alias('signal-argon2').to('org.signal:argon2:13.1')
-            alias('signal-ringrtc').to('org.signal:ringrtc-android:2.26.3')
+            alias('signal-ringrtc').to('org.signal:ringrtc-android:2.27.0')
             alias('signal-android-database-sqlcipher').to('org.signal:sqlcipher-android:4.5.4-S1')
 
             // Third Party

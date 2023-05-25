@@ -101,7 +101,7 @@ class CallSyncEventJob private constructor(
   }
 
   private fun processEvent(callSyncEvent: CallSyncEventJobRecord): CallSyncEventJobRecord? {
-    val call = SignalDatabase.calls.getCallById(callSyncEvent.callId, CallTable.CallConversationId.Peer(callSyncEvent.deserializeRecipientId()))
+    val call = SignalDatabase.calls.getCallById(callSyncEvent.callId, callSyncEvent.deserializeRecipientId())
     if (call == null) {
       Log.w(TAG, "Cannot process event for call that does not exist. Dropping.")
       return null
@@ -138,7 +138,7 @@ class CallSyncEventJob private constructor(
     }
   }
 
-  private fun CallSyncEventJobRecord.deserializeRecipientId(): RecipientId = RecipientId.from(recipientId!!)
+  private fun CallSyncEventJobRecord.deserializeRecipientId(): RecipientId = RecipientId.from(recipientId)
 
   private fun CallSyncEventJobRecord.deserializeDirection(): CallTable.Direction = CallTable.Direction.deserialize(direction)
 

@@ -2105,7 +2105,7 @@ public class ConversationParentFragment extends Fragment
   protected void initializeActionBar() {
     invalidateOptionsMenu();
     toolbar.setOnMenuItemClickListener(menuProvider::onMenuItemSelected);
-
+    toolbar.setNavigationContentDescription(R.string.ConversationFragment__content_description_back_button);
     if (isInBubble()) {
       toolbar.setNavigationIcon(DrawableUtil.tint(ContextUtil.requireDrawable(requireContext(), R.drawable.ic_notification),
                                                   ContextCompat.getColor(requireContext(), R.color.signal_accent_primary)));
@@ -2809,8 +2809,9 @@ public class ConversationParentFragment extends Fragment
       fragment.reload(recipient.get(), threadId);
       setVisibleThread(threadId);
     }
-
-    fragment.scrollToBottom();
+    if (!inputPanel.inEditMessageMode()) {
+      fragment.scrollToBottom();
+    }
     attachmentManager.cleanup();
 
     updateLinkPreviewState();
@@ -3337,11 +3338,16 @@ public class ConversationParentFragment extends Fragment
     bluetoothVoiceNoteUtil.disconnectBluetoothScoConnection();
     voiceRecorderWakeLock.release();
     updateToggleButtonState();
-    Vibrator vibrator = ServiceUtil.getVibrator(requireContext());
-    vibrator.vibrate(20);
 
-    requireActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-    requireActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    Activity activity = getActivity();
+    if (activity != null) {
+      Vibrator vibrator = ServiceUtil.getVibrator(activity);
+      vibrator.vibrate(20);
+
+      activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+      activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    }
+
     if (recordingSession != null) {
       recordingSession.completeRecording();
     }
@@ -3351,11 +3357,15 @@ public class ConversationParentFragment extends Fragment
   public void onRecorderCanceled(boolean byUser) {
     voiceRecorderWakeLock.release();
     updateToggleButtonState();
-    Vibrator vibrator = ServiceUtil.getVibrator(requireContext());
-    vibrator.vibrate(50);
 
-    requireActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-    requireActivity().setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    Activity activity = getActivity();
+    if (activity != null) {
+      Vibrator vibrator = ServiceUtil.getVibrator(activity);
+      vibrator.vibrate(50);
+
+      activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+      activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+    }
 
     if (recordingSession != null) {
       if (byUser) {
@@ -4278,24 +4288,28 @@ public class ConversationParentFragment extends Fragment
       return;
     }
 
-    AlertDialog.Builder builder = new MaterialAlertDialogBuilder(requireContext())
-        .setNeutralButton(R.string.ConversationActivity_cancel, (d, w) -> d.dismiss());
+    // AlertDialog.Builder builder = new MaterialAlertDialogBuilder(requireContext())
+    //     .setNeutralButton(R.string.ConversationActivity_cancel, (d, w) -> d.dismiss());
 
-    if (recipient.isGroup() && recipient.isBlocked()) {
-      builder.setTitle(R.string.ConversationActivity_delete_conversation);
-      builder.setMessage(R.string.ConversationActivity_this_conversation_will_be_deleted_from_all_of_your_devices);
-      builder.setPositiveButton(R.string.ConversationActivity_delete, (d, w) -> requestModel.onDelete());
-    } else if (recipient.isGroup()) {
-      builder.setTitle(R.string.ConversationActivity_delete_and_leave_group);
-      builder.setMessage(R.string.ConversationActivity_you_will_leave_this_group_and_it_will_be_deleted_from_all_of_your_devices);
-      builder.setNegativeButton(R.string.ConversationActivity_delete_and_leave, (d, w) -> requestModel.onDelete());
-    } else {
-      builder.setTitle(R.string.ConversationActivity_delete_conversation);
-      builder.setMessage(R.string.ConversationActivity_this_conversation_will_be_deleted_from_all_of_your_devices);
-      builder.setNegativeButton(R.string.ConversationActivity_delete, (d, w) -> requestModel.onDelete());
-    }
+    // if (recipient.isGroup() && recipient.isBlocked()) {
+    //   builder.setTitle(R.string.ConversationActivity_delete_conversation);
+    //   builder.setMessage(R.string.ConversationActivity_this_conversation_will_be_deleted_from_all_of_your_devices);
+    //   builder.setPositiveButton(R.string.ConversationActivity_delete, (d, w) -> requestModel.onDelete());
+    // } else if (recipient.isGroup()) {
+    //   builder.setTitle(R.string.ConversationActivity_delete_and_leave_group);
+    //   builder.setMessage(R.string.ConversationActivity_you_will_leave_this_group_and_it_will_be_deleted_from_all_of_your_devices);
+    //   builder.setNegativeButton(R.string.ConversationActivity_delete_and_leave, (d, w) -> requestModel.onDelete());
+    // } else {
+    //   builder.setTitle(R.string.ConversationActivity_delete_conversation);
+    //   builder.setMessage(R.string.ConversationActivity_this_conversation_will_be_deleted_from_all_of_your_devices);
+    //   builder.setNegativeButton(R.string.ConversationActivity_delete, (d, w) -> requestModel.onDelete());
+    // }
 
-    builder.show();
+    // builder.show();
+    ConversationDialogs.displayDeleteDialog(requireContext(), recipient, () -> {
+      requestModel.onDelete();
+      return Unit.INSTANCE;
+    });
   }
 
   private void onMessageRequestBlockClicked(@NonNull MessageRequestViewModel requestModel) {

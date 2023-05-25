@@ -15,8 +15,6 @@ import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.BuildConfig;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.groups.SelectionLimits;
-import org.thoughtcrime.securesms.jobs.RefreshAttributesJob;
-import org.thoughtcrime.securesms.jobs.RefreshOwnProfileJob;
 import org.thoughtcrime.securesms.jobs.RemoteConfigRefreshJob;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
 import org.thoughtcrime.securesms.messageprocessingalarm.MessageProcessReceiver;
@@ -106,12 +104,12 @@ public final class FeatureFlags {
   private static final String PAYPAL_RECURRING_DONATIONS        = "android.recurringPayPalDonations.3";
   private static final String TEXT_FORMATTING                   = "android.textFormatting";
   private static final String ANY_ADDRESS_PORTS_KILL_SWITCH     = "android.calling.fieldTrial.anyAddressPortsKillSwitch";
-  private static final String CALLS_TAB                         = "android.calls.tab.2";
-  private static final String TEXT_FORMATTING_SPOILER_SEND      = "android.textFormatting.spoilerSend";
   private static final String AD_HOC_CALLING                    = "android.calling.ad.hoc";
   private static final String EDIT_MESSAGE_RECEIVE              = "android.editMessage.receive";
   private static final String EDIT_MESSAGE_SEND                 = "android.editMessage.send";
   private static final String CALL_DELETE_SYNC                  = "android.calling.deleteSync";
+  private static final String MAX_ATTACHMENT_COUNT              = "android.attachments.maxCount";
+  private static final String MAX_ATTACHMENT_SIZE_MB            = "android.attachments.maxSize";
 
   /**
    * We will only store remote values for flags in this set. If you want a flag to be controllable
@@ -169,10 +167,10 @@ public final class FeatureFlags {
       PAYPAL_RECURRING_DONATIONS,
       TEXT_FORMATTING,
       ANY_ADDRESS_PORTS_KILL_SWITCH,
-      CALLS_TAB,
-      TEXT_FORMATTING_SPOILER_SEND,
       EDIT_MESSAGE_RECEIVE,
-      EDIT_MESSAGE_SEND
+      EDIT_MESSAGE_SEND,
+      MAX_ATTACHMENT_COUNT,
+      MAX_ATTACHMENT_SIZE_MB
   );
 
   @VisibleForTesting
@@ -238,9 +236,10 @@ public final class FeatureFlags {
       PAYMENTS_REQUEST_ACTIVATE_FLOW,
       CDS_HARD_LIMIT,
       TEXT_FORMATTING,
-      TEXT_FORMATTING_SPOILER_SEND,
       EDIT_MESSAGE_RECEIVE,
-      EDIT_MESSAGE_SEND
+      EDIT_MESSAGE_SEND,
+      MAX_ATTACHMENT_COUNT,
+      MAX_ATTACHMENT_SIZE_MB
   );
 
   /**
@@ -588,13 +587,6 @@ public final class FeatureFlags {
   }
 
   /**
-   * Whether or not we should show spoiler text formatting option.
-   */
-  public static boolean textFormattingSpoilerSend() {
-    return getBoolean(TEXT_FORMATTING_SPOILER_SEND, false);
-  }
-
-  /**
    * Enable/disable RingRTC field trial for "AnyAddressPortsKillSwitch"
    */
   public static boolean callingFieldTrialAnyAddressPortsKillSwitch() {
@@ -610,13 +602,6 @@ public final class FeatureFlags {
   }
 
   /**
-   * Whether or not the calls tab is enabled
-   */
-  public static boolean callsTab() {
-    return getBoolean(CALLS_TAB, false);
-  }
-
-  /**
    * Whether or not ad-hoc calling is enabled
    */
   public static boolean adHocCalling() {
@@ -628,6 +613,16 @@ public final class FeatureFlags {
    */
   public static boolean callDeleteSync() {
     return getBoolean(CALL_DELETE_SYNC, false);
+  }
+
+  /** Maximum number of attachments allowed to be sent/received. */
+  public static int maxAttachmentCount() {
+    return getInteger(MAX_ATTACHMENT_COUNT, 32);
+  }
+
+  /** Maximum attachment size, in mebibytes. */
+  public static int maxAttachmentSizeMb() {
+    return getInteger(MAX_ATTACHMENT_SIZE_MB, 100);
   }
 
   /** Only for rendering debug info. */

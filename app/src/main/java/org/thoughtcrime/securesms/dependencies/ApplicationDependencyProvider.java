@@ -21,6 +21,7 @@ import org.thoughtcrime.securesms.components.TypingStatusSender;
 import org.thoughtcrime.securesms.crypto.ReentrantSessionLock;
 import org.thoughtcrime.securesms.crypto.storage.SignalBaseIdentityKeyStore;
 import org.thoughtcrime.securesms.crypto.storage.SignalIdentityKeyStore;
+import org.thoughtcrime.securesms.crypto.storage.SignalKyberPreKeyStore;
 import org.thoughtcrime.securesms.crypto.storage.SignalSenderKeyStore;
 import org.thoughtcrime.securesms.crypto.storage.SignalServiceAccountDataStoreImpl;
 import org.thoughtcrime.securesms.crypto.storage.SignalServiceDataStoreImpl;
@@ -42,6 +43,7 @@ import org.thoughtcrime.securesms.jobs.PushDecryptMessageJob;
 import org.thoughtcrime.securesms.jobs.PushGroupSendJob;
 import org.thoughtcrime.securesms.jobs.IndividualSendJob;
 import org.thoughtcrime.securesms.jobs.PushProcessMessageJob;
+import org.thoughtcrime.securesms.jobs.PushProcessMessageJobV2;
 import org.thoughtcrime.securesms.jobs.ReactionSendJob;
 import org.thoughtcrime.securesms.jobs.TypingSendJob;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
@@ -86,6 +88,7 @@ import org.whispersystems.signalservice.api.groupsv2.ClientZkOperations;
 import org.whispersystems.signalservice.api.groupsv2.GroupsV2Operations;
 import org.whispersystems.signalservice.api.push.ACI;
 import org.whispersystems.signalservice.api.push.PNI;
+import org.whispersystems.signalservice.api.services.CallLinksService;
 import org.whispersystems.signalservice.api.services.DonationsService;
 import org.whispersystems.signalservice.api.services.ProfileService;
 import org.whispersystems.signalservice.api.util.CredentialsProvider;
@@ -333,12 +336,14 @@ public class ApplicationDependencyProvider implements ApplicationDependencies.Pr
 
     SignalServiceAccountDataStoreImpl aciStore = new SignalServiceAccountDataStoreImpl(context,
                                                                                        new TextSecurePreKeyStore(localAci),
+                                                                                       new SignalKyberPreKeyStore(localAci),
                                                                                        new SignalIdentityKeyStore(baseIdentityStore, () -> SignalStore.account().getAciIdentityKey()),
                                                                                        new TextSecureSessionStore(localAci),
                                                                                        new SignalSenderKeyStore(context));
 
     SignalServiceAccountDataStoreImpl pniStore = new SignalServiceAccountDataStoreImpl(context,
                                                                                        new TextSecurePreKeyStore(localPni),
+                                                                                       new SignalKyberPreKeyStore(localPni),
                                                                                        new SignalIdentityKeyStore(baseIdentityStore, () -> SignalStore.account().getPniIdentityKey()),
                                                                                        new TextSecureSessionStore(localPni),
                                                                                        new SignalSenderKeyStore(context));
@@ -363,6 +368,15 @@ public class ApplicationDependencyProvider implements ApplicationDependencies.Pr
   @Override
   public @NonNull DonationsService provideDonationsService(@NonNull SignalServiceConfiguration signalServiceConfiguration, @NonNull GroupsV2Operations groupsV2Operations) {
     return new DonationsService(signalServiceConfiguration,
+                                new DynamicCredentialsProvider(),
+                                BuildConfig.SIGNAL_AGENT,
+                                groupsV2Operations,
+                                FeatureFlags.okHttpAutomaticRetry());
+  }
+
+  @Override
+  public @NonNull CallLinksService provideCallLinksService(@NonNull SignalServiceConfiguration signalServiceConfiguration, @NonNull GroupsV2Operations groupsV2Operations) {
+    return new CallLinksService(signalServiceConfiguration,
                                 new DynamicCredentialsProvider(),
                                 BuildConfig.SIGNAL_AGENT,
                                 groupsV2Operations,
